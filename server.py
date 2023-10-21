@@ -16,8 +16,8 @@ private_key = rsa.generate_private_key(
 )
 public_key = private_key.public_key()
 
-# This is function to broadcast encrypted messages to all connected clients
-def broadcast_encrypted_message(client_socket, message):
+# This is function to multicast encrypted messages to connected clients
+def multicast_encrypted_message(client_socket, message):
     for client in clients:
         if client != client_socket:
             try:
@@ -51,7 +51,7 @@ def handle_client(client_socket):
                         label=None,
                     ),
                 ).decode('utf-8')
-                broadcast_encrypted_message(client_socket, plaintext)
+                multicast_encrypted_message(client_socket, plaintext)
             else:
                 remove_client(client_socket)
         except:
