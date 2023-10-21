@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 
 # Server configuration
 HOST = '127.0.0.1'
-PORT = 12347
+PORT = 12345
 clients = []
 private_key = rsa.generate_private_key(
     public_exponent=65537,
