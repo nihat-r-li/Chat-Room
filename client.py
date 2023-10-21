@@ -5,15 +5,17 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-# Client configuration
 HOST = '127.0.0.1'
 PORT = 12345
+
+# Generate RSA key pair for encryption
 private_key = rsa.generate_private_key(
     public_exponent=65537,
     key_size=2048,
 )
 public_key = private_key.public_key()
 
+# Function to send encrypted messages
 def send_encrypted_message(client_socket):
     while True:
         message = input("")
@@ -27,6 +29,7 @@ def send_encrypted_message(client_socket):
         )
         client_socket.send(ciphertext)
 
+# Function to receive and display decrypted messages from the server
 def receive_decrypted_messages(client_socket):
     while True:
         ciphertext = client_socket.recv(2048)
@@ -43,6 +46,7 @@ def receive_decrypted_messages(client_socket):
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((HOST, PORT))
 
+# Create threads for sending and receiving messages
 send_thread = threading.Thread(target=send_encrypted_message, args=(client,))
 send_thread.start()
 
