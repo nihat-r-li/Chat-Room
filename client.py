@@ -11,8 +11,9 @@ if len(sys.argv) != 3:
         print("Usage: python script.py <ip_address> <port>")
         sys.exit(1)
 
-    ip_address = sys.argv[1]
-    port = int(sys.argv[2])
+    HOST = sys.argv[1]
+    PORT = int(sys.argv[2])
+
 
 
 # Generation of RSA key pair for encryption
