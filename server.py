@@ -1,12 +1,18 @@
 import socket
 import threading
+import sys
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-HOST = '127.0.0.1'
-PORT = 12345
+
+if len(sys.argv) != 3:
+        print("Usage: python script.py <ip_address> <port>")
+        sys.exit(1)
+
+    HOST = sys.argv[1]
+    PORT = int(sys.argv[2])
 clients = []  # List to store connected client sockets
 
 # Generation of RSA key pair for encryption
