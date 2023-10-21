@@ -11,7 +11,7 @@ This is a simple chat room application implemented in Python using asyncio and R
 ## Requirements
 
 - Python 3.7 or later.
-- The `rsa` library. Install it using `pip install rsa`.
+- The `rsa` library. Install it using `pip install cryptography`.
 
 ## Installation
 
@@ -29,7 +29,7 @@ Clone the repository:
     ```shell
     pyhton server.py
     ```
-    The server will start listening for incoming connections on 127.0.0.1:8888.
+    The server will start listening for incoming connections on 127.0.0.1:12345.
 
 2. Run the client:
 
@@ -54,3 +54,6 @@ Clone the repository:
 4. Make your changes and commit them.
 5. Push the changes to your fork on GitHub.
 6. Create a pull request from your fork to the main repository.
+
+
+
