@@ -1,55 +1,70 @@
-import asyncio
-import rsa
+import socket
+import threading
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
-# Generate an RSA key pair for the server
-private_key, public_key = rsa.newkeys(512)
-
-# List to store connected clients
+# Server configuration
+HOST = '127.0.0.1'
+PORT = 12347
 clients = []
+private_key = rsa.generate_private_key(
+    public_exponent=65537,
+    key_size=2048,
+)
+public_key = private_key.public_key()
 
-async def handle_client(reader, writer):
-    remote_address = writer.get_extra_info('peername')
-    print(f"New connection from {remote_address}")
+def broadcast_encrypted_message(client_socket, message):
+    for client in clients:
+        if client != client_socket:
+            try:
+                ciphertext = client.encrypt(
+                    message.encode('utf-8'),
+                    padding.OAEP(
+                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None,
+                    ),
+                )
+                client.send(ciphertext)
+            except:
+                client.close()
+                remove_client(client)
 
-    # Add the client's writer to the list of clients
-    clients.append(writer)
+def handle_client(client_socket):
+    while True:
+        try:
+            ciphertext = client_socket.recv(2048)
+            if ciphertext:
+                plaintext = private_key.decrypt(
+                    ciphertext,
+                    padding.OAEP(
+                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None,
+                    ),
+                ).decode('utf-8')
+                broadcast_encrypted_message(client_socket, plaintext)
+            else:
+                remove_client(client_socket)
+        except:
+            continue
 
-    try:
-        while True:
-            data = await reader.read(100)
-            if not data:
-                break
+def remove_client(client_socket):
+    if client_socket in clients:
+        clients.remove(client_socket)
+        client_socket.close()
 
-            # Received data from a client
-            message = data.decode()
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind((HOST, PORT))
+server.listen(5)
 
-            # Encrypt the received message using the server's public key
-            encrypted_message = rsa.encrypt(message.encode(), public_key)
-            print(f"Received: {message} from {remote_address}")
+print("Chat server is running on port " + str(PORT))
 
-            # Send the encrypted message to all connected clients
-            for client in clients:
-                if client != writer:
-                    client.write(encrypted_message)
-
-            await writer.drain()
-
-    except asyncio.CancelledError:
-        pass
-
-    finally:
-        print(f"Connection closed from {remote_address}")
-
-        # Remove the client's writer from the list of clients
-        clients.remove(writer)
-        writer.close()
-        await writer.wait_closed()
-
-async def main():
-    server = await asyncio.start_server(handle_client, '127.0.0.1', 8888)
-
-    async with server:
-        await server.serve_forever()
-
-if __name__ == '__main__':
-    asyncio.run(main())
+while True:
+    client_socket, client_addr = server.accept()
+    clients.append(client_socket)
+    print("Client connected from " + str(client_addr))
+    client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+    client_thread.start()
