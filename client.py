@@ -1,40 +1,50 @@
-import asyncio
-import rsa
+import socket
+import threading
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
-async def handle_client(reader, writer):
+# Client configuration
+HOST = '127.0.0.1'
+PORT = 12345
+private_key = rsa.generate_private_key(
+    public_exponent=65537,
+    key_size=2048,
+)
+public_key = private_key.public_key()
+
+def send_encrypted_message(client_socket):
     while True:
-        # Prompt the user for a message to send
-        message = input("Enter a message to send to the server: ")
-        if message.lower() == "exit":
-            break
+        message = input("")
+        ciphertext = public_key.encrypt(
+            message.encode('utf-8'),
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None,
+            ),
+        )
+        client_socket.send(ciphertext)
 
-        # Encrypt the message using the server's public key (obtained securely)
-        encrypted_message = rsa.encrypt(message.encode(), server_public_key)
-
-        # Send the encrypted message to the server
-        writer.write(encrypted_message)
-        await writer.drain()
-
-async def main():
-    client = await asyncio.open_connection('127.0.0.1', 8888)
-
-    reader, writer = client
-
+def receive_decrypted_messages(client_socket):
     while True:
-        data = await reader.read(100)
+        ciphertext = client_socket.recv(2048)
+        plaintext = private_key.decrypt(
+            ciphertext,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None,
+            ),
+        ).decode('utf-8')
+        print(">", plaintext)
 
-        # Decrypt the received message using the client's private key
-        decrypted_message = rsa.decrypt(data, client_private_key).decode()
-        print(f"Received from server: {decrypted_message}")
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect((HOST, PORT))
 
-    writer.close()
-    await writer.wait_closed()
+send_thread = threading.Thread(target=send_encrypted_message, args=(client,))
+send_thread.start()
 
-if __name__ == '__main__':
-    # Load your RSA key pair for the client (private_key, public_key)
-    client_private_key, client_public_key = rsa.newkeys(512)
-
-    # The server's public key should be obtained securely.
-    # Load it here (server_public_key) or share it from a secure source.
-
-    asyncio.run(main())
+receive_thread = threading.Thread(target=receive_decrypted_messages, args=(client,))
+receive_thread.start()
